@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SafeLimit∞ Business Pro</title>
+  
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><linearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22><stop offset=%220%25%22 stop-color=%22%23e2b04a%22/><stop offset=%22100%25%22 stop-color=%22%239c7a2e%22/></linearGradient><path d=%22M20 50c0-15 10-25 25-25s20 10 20 25-10 25-25 25-25-10-25-25zm40 0c0-15 10-25 25-25s25 10 25 25-10 25-25 25-25-10-25-25z%22 fill=%22none%22 stroke=%22url(%23g)%22 stroke-width=%228%22/><text y=%22.9em%22 font-size=%2240%22 font-weight=%22800%22 fill=%22%23c9a227%22 x=%2225%22 y=%2265%22 font-family=%22Arial%22>SL</text></svg>">
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  
+  <style>
+    :root {
+      --bg-app: #0f0f11;
+      --card-bg: #1c1c1e;
+      --text-main: #f5f5f7;
+      --text-muted: #8e8e93;
+      --border-color: #2c2c2e;
+      --safe: #30d158;
+      --warn: #ffd60a;
+      --danger: #ff453a;
+      --brand: #c9a227; /* Oro BCP Style */
+      --current-color: var(--safe);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-app);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 15px;
+      margin: 0;
+      min-height: 100vh;
+    }
+
+    /* ESTILO DEL LOGO SVG INYECTADO */
+    .brand-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 25px;
+      animation: fadeIn 1.2s ease-out;
+    }
+
+    .logo-container {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 10px;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .dashboard { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 16px; }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 28px;
+      padding: 24px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    .card-annual { border-left: 5px solid var(--brand); background: linear-gradient(145deg, #1c1c1e, #141416); }
+    .card-monthly { border-top: 5px solid var(--current-color); }
+
+    .label-caps { color: var(--text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; margin-bottom: 8px; display: block; }
+    .monto-grande { font-size: 3rem; font-weight: 800; text-align: center; margin: 10px 0; color: var(--current-color); letter-spacing: -2px; }
+
+    .progress-bg { background: #2c2c2e; border-radius: 999px; height: 12px; overflow: hidden; margin: 12px 0; border: 1px solid #3a3a3c; }
+    .progress-bar { height: 100%; transition: width 1.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+    .math-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+    .math-box { background: #121214; padding: 15px; border-radius: 18px; border: 1px solid var(--border-color); }
+
+    .form-registro { display: flex; flex-direction: column; gap: 12px; margin-top: 25px; }
+    input, select { 
+      background: #121214; border: 1px solid var(--border-color); color: white; 
+      padding: 16px; border-radius: 14px; font-family: inherit; font-size: 14px; outline: none; transition: 0.3s;
+    }
+    input:focus { border-color: var(--brand); box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.2); }
+    .btn-add { background: var(--brand); color: #000; font-weight: 800; border: none; padding: 18px; border-radius: 16px; cursor: pointer; font-size: 16px; margin-top: 10px; }
+
+    .history-item { display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid var(--border-color); }
+    .item-facturado { border-left: 4px solid var(--brand); background: rgba(201, 162, 39, 0.05); }
+    
+    .btn-check { 
+      width: 32px; height: 32px; border-radius: 10px; border: 1px solid #444; 
+      background: transparent; color: #444; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .btn-check.active { background: var(--brand); border-color: var(--brand); color: #000; }
+    .btn-excel { background: transparent; border: 1px solid var(--brand); color: var(--brand); padding: 15px; border-radius: 16px; width: 100%; font-weight: 700; margin-top: 20px; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+  <header class="brand-header">
+    <div class="logo-container">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#f8e2a1;stop-opacity:1" />
+            <stop offset="50%" style="stop-color:#c9a227;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#8e6d1a;stop-opacity:1" />
+          </linearGradient>
+        </defs>
+        <path d="M30 40 C 10 40, 10 70, 30 70 C 45 70, 55 30, 70 30 C 90 30, 90 60, 70 60 C 55 60, 45 40, 30 40" 
+              fill="none" stroke="url(#goldGrad)" stroke-width="8" stroke-linecap="round"/>
+        <text x="50%" y="62%" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" font-size="16" fill="url(#goldGrad)" style="letter-spacing: 1px;">SAFELIMIT∞</text>
+      </svg>
+    </div>
+  </header>
+
+  <div class="dashboard">
+    <div style="display:flex; gap:10px;">
+      <select id="sel-mes" onchange="actualizarUI()" style="flex:2"></select>
+      <select id="sel-ano" onchange="actualizarUI()" style="flex:1"></select>
+    </div>
+
+    <div class="card card-annual">
+      <span class="label-caps">Control de Suspensión Anual</span>
+      <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+        <span id="txt-total-ano" style="font-size: 1.8rem; font-weight: 800;">S/ 0.00</span>
+        <span id="txt-porc-ano" style="font-size: 11px; color: var(--text-muted); font-weight:600;">0%</span>
+      </div>
+      <div class="progress-bg">
+        <div id="bar-ano" class="progress-bar" style="width: 0%; background: var(--brand); box-shadow: 0 0 15px rgba(201, 162, 39, 0.4);"></div>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:9px; color:var(--text-muted); font-weight:600;">
+        <span>PROYECCIÓN ACUMULADA</span>
+        <span>META: S/ 48,125</span>
+      </div>
+    </div>
+
+    <div class="card card-monthly">
+      <span class="label-caps" id="lbl-mes-ano">...</span>
+      <div class="monto-grande" id="txt-total-mes">0.00</div>
+      
+      <div class="progress-bg">
+        <div id="bar-mes" class="progress-bar" style="width: 0%; background: var(--current-color); box-shadow: 0 0 15px var(--current-color);"></div>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-muted); font-weight:600;">
+        <span id="txt-porc-mes">0% del tope</span>
+        <span>TOPE MENSUAL: S/ 4,010</span>
+      </div>
+
+      <div class="math-grid">
+        <div class="math-box">
+          <span class="label-caps" style="font-size:8px;">Retención (8%)</span>
+          <span id="txt-tax" style="font-weight:800; color:var(--danger); font-size:16px;">S/ 0.00</span>
+        </div>
+        <div class="math-box">
+          <span class="label-caps" style="font-size:8px;">Por Facturar</span>
+          <span id="txt-pend" style="font-weight:800; color:var(--brand); font-size:16px;">S/ 0.00</span>
+        </div>
+      </div>
+
+      <div class="form-registro">
+        <div style="display:flex; gap:10px;">
+          <input type="number" id="in-monto" placeholder="S/ Monto" style="flex:1">
+          <input type="text" id="in-desc" placeholder="Nombre Proyecto" style="flex:2">
+        </div>
+        <div style="display:flex; gap:10px;">
+          <input type="text" id="in-doc" placeholder="DNI/RUC Cliente" style="flex:1">
+          <input type="url" id="in-link" placeholder="Link Drive Arte" style="flex:1">
+        </div>
+        <button class="btn-add" onclick="registrar()">REGISTRAR EN LIBRO CONTABLE</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <span class="label-caps">Historial Tributario</span>
+      <div id="historia" style="max-height: 350px; overflow-y: auto;"></div>
+      <button class="btn-excel" onclick="exportarExcelV4()">DESCARGAR AUDITORÍA (.XLSX)</button>
+    </div>
+  </div>
+
+  <script>
+    const DIRIS = 2000;
+    const TOPE_M = 4010;
+    const TOPE_A = 48125;
+    const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+    
+    let db = JSON.parse(localStorage.getItem('SL_ULTRA_FINAL_2030')) || {};
+    let anoAct = new Date().getFullYear();
+    let mesAct = new Date().getMonth();
+
+    function init() {
+      const sm = document.getElementById('sel-mes');
+      const sa = document.getElementById('sel-ano');
+      MESES.forEach((m,i) => sm.add(new Option(m,i)));
+      for(let i=0; i<5; i++) {
+        let y = 2026 + i;
+        sa.add(new Option(y, y));
+      }
+      sm.value = mesAct;
+      sa.value = anoAct;
+      actualizarUI();
+    }
+
+    function registrar() {
+      const m = parseFloat(document.getElementById('in-monto').value);
+      const d = document.getElementById('in-desc').value || "Servicio Diseño";
+      const doc = document.getElementById('in-doc').value || "---";
+      const l = document.getElementById('in-link').value || "";
+
+      if(m > 0) {
+        if(!db[anoAct]) db[anoAct] = {};
+        if(!db[anoAct][mesAct]) db[anoAct][mesAct] = [];
+        db[anoAct][mesAct].push({ id:Date.now(), a:m, desc:d, doc:doc, link:l, fact:false, fecha:new Date().toLocaleDateString('es-PE') });
+        save();
+        document.getElementById('in-monto').value = '';
+        document.getElementById('in-desc').value = '';
+        document.getElementById('in-doc').value = '';
+        document.getElementById('in-link').value = '';
+        actualizarUI();
+      }
+    }
+
+    function toggleFact(id) {
+      db[anoAct][mesAct] = db[anoAct][mesAct].map(x => x.id === id ? {...x, fact:!x.fact} : x);
+      save(); actualizarUI();
+    }
+
+    function borrar(id) { if(confirm('¿Eliminar registro?')) { db[anoAct][mesAct] = db[anoAct][mesAct].filter(x => x.id!==id); save(); actualizarUI(); } }
+    function save() { localStorage.setItem('SL_ULTRA_FINAL_2030', JSON.stringify(db)); }
+
+    function actualizarUI() {
+      mesAct = parseInt(document.getElementById('sel-mes').value);
+      anoAct = parseInt(document.getElementById('sel-ano').value);
+      
+      const lista = (db[anoAct] && db[anoAct][mesAct]) ? db[anoAct][mesAct] : [];
+      const totalLogosMes = lista.reduce((s,x) => s + x.a, 0);
+      const totalGlobalMes = totalLogosMes + DIRIS;
+      
+      let totalLogosAno = 0;
+      if(db[anoAct]) {
+        for(let m=0; m<12; m++) {
+          if(db[anoAct][m]) totalLogosAno += db[anoAct][m].reduce((s,x) => s + x.a, 0);
+        }
+      }
+      const totalGlobalAno = totalLogosAno + (DIRIS * 12);
+
+      document.getElementById('lbl-mes-ano').innerText = `${MESES[mesAct]} ${anoAct}`;
+      document.getElementById('txt-total-mes').innerText = totalLogosMes.toLocaleString('en-US', {minimumFractionDigits:2});
+      
+      let pMes = (totalGlobalMes / TOPE_M) * 100;
+      document.getElementById('bar-mes').style.width = Math.min(pMes, 100) + "%";
+      document.getElementById('txt-porc-mes').innerText = pMes.toFixed(1) + "%";
+      
+      document.getElementById('txt-total-ano').innerText = "S/ " + totalGlobalAno.toLocaleString('en-US', {minimumFractionDigits:2});
+      let pAno = (totalGlobalAno / TOPE_A) * 100;
+      document.getElementById('bar-ano').style.width = Math.min(pAno, 100) + "%";
+      document.getElementById('txt-porc-ano').innerText = pAno.toFixed(1) + "%";
+      
+      const root = document.documentElement;
+      if(totalGlobalMes > TOPE_M) root.style.setProperty('--current-color', 'var(--danger)');
+      else if(totalGlobalMes > 3500) root.style.setProperty('--current-color', 'var(--warn)');
+      else root.style.setProperty('--current-color', 'var(--safe)');
+
+      const tax = totalGlobalMes > TOPE_M ? totalGlobalMes * 0.08 : 0;
+      document.getElementById('txt-tax').innerText = "S/ " + tax.toFixed(2);
+      const pend = lista.filter(x => !x.fact).reduce((s,x) => s + x.a, 0);
+      document.getElementById('txt-pend').innerText = "S/ " + pend.toFixed(2);
+
+      const cont = document.getElementById('historia');
+      cont.innerHTML = lista.length ? '' : '<p style="text-align:center;font-size:12px;color:#555;margin-top:20px;">Sin datos.</p>';
+      [...lista].reverse().forEach(x => {
+        cont.innerHTML += `
+          <div class="history-item ${x.fact ? 'item-facturado' : ''}">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <button class="btn-check ${x.fact ? 'active' : ''}" onclick="toggleFact(${x.id})">✓</button>
+              <div>
+                <span style="display:block; font-size:14px; font-weight:600;">${x.desc}</span>
+                <span style="font-size:10px; color:#666;">Doc: ${x.doc}</span>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <span style="font-weight:800;">S/ ${x.a.toFixed(2)}</span>
+              <button onclick="borrar(${x.id})" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:18px; margin-left:12px;">×</button>
+            </div>
+          </div>`;
+      });
+    }
+
+    async function exportarExcelV4() {
+      const lista = (db[anoAct] && db[anoAct][mesAct]) ? db[anoAct][mesAct] : [];
+      if(!lista.length) return alert("No hay registros para exportar.");
+
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('AUDITORÍA');
+
+      ws.columns = [
+        { header: 'FECHA', key: 'fecha', width: 15 },
+        { header: 'DNI / RUC', key: 'doc', width: 15 },
+        { header: 'SERVICIO', key: 'desc', width: 40 },
+        { header: 'FACTURADO', key: 'fact', width: 15 },
+        { header: 'BRUTO', key: 'a', width: 15 },
+        { header: 'IMPUESTO', key: 'tax', width: 15 },
+        { header: 'NETO', key: 'net', width: 15 },
+        { header: 'SUSTENTO', key: 'link', width: 35 }
+      ];
+
+      const head = ws.getRow(1);
+      head.font = { bold:true, color:{argb:'FFFFFFFF'} };
+      head.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FF1C1C1E'} };
+
+      const totalLogosMes = lista.reduce((s,x) => s + x.a, 0);
+      const aplicaImpuesto = (totalLogosMes + DIRIS) > TOPE_M;
+
+      lista.forEach((x, i) => {
+        const taxVal = aplicaImpuesto ? x.a * 0.08 : 0;
+        const row = ws.addRow({
+          fecha: x.fecha, doc: x.doc, desc: x.desc,
+          fact: x.fact ? 'SÍ' : 'NO', a: x.a, tax: taxVal, net: x.a - taxVal,
+          link: x.link ? { text: 'Ver Arte', hyperlink: x.link } : 'N/A'
+        });
+        if(i % 2 === 0) row.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFF5F5F7'} };
+        ['a','tax','net'].forEach(c => row.getCell(c).numFmt = '"S/" #,##0.00');
+        if(x.link) row.getCell('link').font = { color:{argb:'FF007AFF'}, underline:true };
+      });
+
+      const buffer = await wb.xlsx.writeBuffer();
+      saveAs(new Blob([buffer]), `SafeLimit_Auditoria_${MESES[mesAct]}.xlsx`);
+    }
+
+    init();
+  </script>
+</body>
+</html>
