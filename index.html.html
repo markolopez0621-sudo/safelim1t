@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SafeLimit∞ Ledger Master Pro</title>
+  
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f0f11'/><path d='M30 40 C 10 40, 10 70, 30 70 C 45 70, 55 30, 70 30 C 90 30, 90 60, 70 60 C 55 60, 45 40, 30 40' fill='none' stroke='%23c9a227' stroke-width='8' stroke-linecap='round'/></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M30 40 C 10 40, 10 70, 30 70 C 45 70, 55 30, 70 30 C 90 30, 90 60, 70 60 C 55 60, 45 40, 30 40' fill='none' stroke='%23c9a227' stroke-width='10' stroke-linecap='round'/></svg>">
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  
+  <style>
+    :root {
+      --bg: #0f0f11; --card: #1c1c1e; --text: #f5f5f7; --muted: #8e8e93;
+      --border: #2c2c2e; --safe: #30d158; --warn: #ffd60a; --danger: #ff453a;
+      --brand: #c9a227; --current: var(--safe);
+    }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; padding: 20px 15px; margin: 0; }
+    .logo-header { width: 70px; height: 70px; margin-bottom: 20px; }
+    .dashboard { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 15px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 22px; box-shadow: 0 8px 30px rgba(0,0,0,0.4); }
+    .card-annual { border-left: 5px solid var(--brand); }
+    .card-monthly { border-top: 5px solid var(--current); }
+    .label-caps { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; margin-bottom: 5px; display: block; }
+    .monto { font-size: 2.5rem; font-weight: 800; text-align: center; margin: 10px 0; color: var(--current); letter-spacing: -1px; }
+    .progress-bg { background: #2c2c2e; border-radius: 10px; height: 8px; overflow: hidden; margin: 10px 0; }
+    .progress-bar { height: 100%; transition: width 1s ease-in-out; }
+    .grid-tax { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+    .tax-box { background: #121214; padding: 12px; border-radius: 15px; border: 1px solid var(--border); }
+    .form { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; }
+    input, select { background: #121214; border: 1px solid var(--border); color: white; padding: 14px; border-radius: 12px; outline: none; }
+    .btn-add { background: var(--brand); color: #000; font-weight: 800; border: none; padding: 16px; border-radius: 15px; cursor: pointer; }
+    .history-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--border); }
+    .item-fact { border-left: 3px solid var(--brand); padding-left: 10px; background: rgba(201, 162, 39, 0.05); }
+    .btn-check { width: 30px; height: 30px; border-radius: 8px; border: 1px solid #444; background: transparent; cursor: pointer; }
+    .btn-check.active { background: var(--brand); border-color: var(--brand); color: #000; }
+    .btn-excel { background: transparent; border: 2px solid var(--brand); color: var(--brand); padding: 15px; border-radius: 15px; width: 100%; font-weight: 700; margin-top: 20px; cursor: pointer; }
+    #guide { display: none; background: #1c1c1e; border: 1px solid var(--brand); padding: 20px; border-radius: 20px; margin-top: 15px; font-size: 13px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+
+  <header class="logo-header">
+    <svg viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#f8e2a1"/><stop offset="100%" stop-color="#8e6d1a"/></linearGradient></defs>
+    <path d="M30 40 C 10 40, 10 70, 30 70 C 45 70, 55 30, 70 30 C 90 30, 90 60, 70 60 C 55 60, 45 40, 30 40" fill="none" stroke="url(#g)" stroke-width="8" stroke-linecap="round"/></svg>
+  </header>
+
+  <div class="dashboard">
+    <div style="display:flex; gap:10px;">
+      <select id="sel-mes" onchange="actualizarUI()" style="flex:2"></select>
+      <select id="sel-ano" onchange="actualizarUI()" style="flex:1"></select>
+    </div>
+
+    <div class="card card-annual">
+      <span class="label-caps">Progreso Anual Proyectado</span>
+      <div style="display:flex; justify-content:space-between; align-items:baseline;">
+        <span id="txt-ano" style="font-size: 1.6rem; font-weight: 800;">S/ 0.00</span>
+        <span id="p-ano" style="font-size: 12px; color: var(--brand); font-weight: 600;">0%</span>
+      </div>
+      <div class="progress-bg"><div id="bar-ano" class="progress-bar" style="background: var(--brand); width:0%"></div></div>
+    </div>
+
+    <div class="card card-monthly">
+      <span class="label-caps" id="lbl-fecha">CARGANDO...</span>
+      <div class="monto" id="txt-mes">0.00</div>
+      <div class="progress-bg"><div id="bar-mes" class="progress-bar" style="background: var(--current); width:0%"></div></div>
+      
+      <div class="grid-tax">
+        <div class="tax-box"><span class="label-caps" style="font-size:8px;">Retención (8%)</span><span id="txt-tax" style="color:var(--danger); font-weight:800;">S/ 0.00</span></div>
+        <div class="tax-box"><span class="label-caps" style="font-size:8px;">Por Facturar</span><span id="txt-pend" style="color:var(--brand); font-weight:800;">S/ 0.00</span></div>
+      </div>
+
+      <div class="form">
+        <div style="display:flex; gap:8px;"><input type="number" id="in-m" placeholder="S/ Monto" style="flex:1"><input type="text" id="in-d" placeholder="Cliente" style="flex:2"></div>
+        <input type="text" id="in-doc" placeholder="DNI / RUC">
+        <input type="url" id="in-l" placeholder="Enlace Drive Sustento">
+        <button class="btn-add" onclick="registrar()">REGISTRAR EN LIBRO MAESTRO</button>
+      </div>
+    </div>
+
+    <div id="guide">
+      <span class="label-caps" style="color:var(--brand)">🛡️ Protocolo de Auditoría</span>
+      1. Coincidencia de montos bancarios.<br>2. Sustento digital activo (Drive).<br>3. RUC/DNI correcto en RHE.<br>
+      <button onclick="toggleGuide()" style="background:none; border:none; color:var(--brand); cursor:pointer; margin-top:10px;">Cerrar</button>
+    </div>
+
+    <div class="card">
+      <span class="label-caps">Historial de Transacciones</span>
+      <div id="historia" style="max-height: 300px; overflow-y: auto; margin-bottom: 10px;"></div>
+      <button class="btn-excel" onclick="exportarExcelV5()">DESCARGAR REPORTE DE AUDITORÍA (.XLSX)</button>
+      <button onclick="toggleGuide()" style="background:none; border:none; color:var(--muted); width:100%; font-size:11px; margin-top:10px; cursor:pointer;">Manual de Supervivencia SUNAT</button>
+    </div>
+  </div>
+
+  <script>
+    const DIRIS = 2000; const TOPE_M = 4010; const TOPE_A = 48125;
+    const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+    let db = JSON.parse(localStorage.getItem('SL_MASTER_V11')) || {};
+    let anoA = new Date().getFullYear(); let mesA = new Date().getMonth();
+
+    function init() {
+      const sm = document.getElementById('sel-mes'); const sa = document.getElementById('sel-ano');
+      MESES.forEach((m,i) => sm.add(new Option(m,i)));
+      for(let i=0; i<5; i++) sa.add(new Option(2026+i, 2026+i));
+      sm.value = mesA; sa.value = 2026; actualizarUI();
+    }
+
+    function toggleGuide() { const g = document.getElementById('guide'); g.style.display = g.style.display === 'block' ? 'none' : 'block'; }
+
+    function registrar() {
+      const m = parseFloat(document.getElementById('in-m').value);
+      const d = document.getElementById('in-d').value || "Logo";
+      const doc = document.getElementById('in-doc').value || "---";
+      const l = document.getElementById('in-l').value || "";
+      if(m > 0) {
+        if(!db[anoA]) db[anoA] = {}; if(!db[anoA][mesA]) db[anoA][mesA] = [];
+        db[anoA][mesA].push({ id:Date.now(), a:m, desc:d, doc:doc, link:l, fact:false, fecha:new Date().toLocaleDateString('es-PE') });
+        save(); actualizarUI();
+        document.getElementById('in-m').value = ''; document.getElementById('in-d').value = ''; document.getElementById('in-doc').value = ''; document.getElementById('in-l').value = '';
+      }
+    }
+
+    function toggleFact(id) { db[anoA][mesA] = db[anoA][mesA].map(x => x.id === id ? {...x, fact:!x.fact} : x); save(); actualizarUI(); }
+    function borrar(id) { if(confirm('¿Borrar?')) { db[anoA][mesA] = db[anoA][mesA].filter(x => x.id!==id); save(); actualizarUI(); } }
+    function save() { localStorage.setItem('SL_MASTER_V11', JSON.stringify(db)); }
+
+    function actualizarUI() {
+      mesA = parseInt(document.getElementById('sel-mes').value);
+      anoA = parseInt(document.getElementById('sel-ano').value);
+      const lista = (db[anoA] && db[anoA][mesA]) ? db[anoA][mesA] : [];
+      const tLogosM = lista.reduce((s,x) => s + x.a, 0);
+      const tGlobalM = tLogosM + DIRIS;
+      let tLogosA = 0; if(db[anoA]) { for(let m=0; m<12; m++) if(db[anoA][m]) tLogosA += db[anoA][m].reduce((s,x) => s + x.a, 0); }
+      const tGlobalA = tLogosA + (DIRIS * 12);
+
+      document.getElementById('lbl-fecha').innerText = `${MESES[mesA]} ${anoA}`;
+      document.getElementById('txt-mes').innerText = tLogosM.toLocaleString('en-US',{minimumFractionDigits:2});
+      document.getElementById('bar-mes').style.width = Math.min((tGlobalM/TOPE_M)*100, 100) + "%";
+      document.getElementById('txt-ano').innerText = "S/ " + tGlobalA.toLocaleString('en-US',{minimumFractionDigits:2});
+      document.getElementById('p-ano').innerText = ((tGlobalA/TOPE_A)*100).toFixed(1) + "%";
+      document.getElementById('bar-ano').style.width = Math.min((tGlobalA/TOPE_A)*100, 100) + "%";
+      
+      const root = document.documentElement;
+      root.style.setProperty('--current', tGlobalM > TOPE_M ? 'var(--danger)' : 'var(--safe)');
+      document.getElementById('txt-tax').innerText = "S/ " + (tGlobalM > TOPE_M ? tGlobalM * 0.08 : 0).toFixed(2);
+      document.getElementById('txt-pend').innerText = "S/ " + lista.filter(x => !x.fact).reduce((s,x) => s + x.a, 0).toFixed(2);
+
+      const cont = document.getElementById('historia');
+      cont.innerHTML = lista.length ? '' : '<p style="text-align:center;font-size:12px;color:#555;">Sin movimientos.</p>';
+      [...lista].reverse().forEach(x => {
+        cont.innerHTML += `<div class="history-item ${x.fact ? 'item-fact' : ''}">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <button class="btn-check ${x.fact ? 'active' : ''}" onclick="toggleFact(${x.id})">✓</button>
+            <div><span style="font-size:14px;font-weight:600;">${x.desc}</span><br><span style="font-size:10px;color:#666;">${x.doc}</span></div>
+          </div>
+          <div style="text-align:right"><span style="font-weight:800;">S/ ${x.a.toFixed(2)}</span><br><button onclick="borrar(${x.id})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;">×</button></div>
+        </div>`;
+      });
+    }
+
+    async function exportarExcelV5() {
+      const lista = (db[anoA] && db[anoA][mesA]) ? db[anoAct] ? db[anoA][mesA] : [] : [];
+      if(!lista.length) return alert("No hay datos.");
+
+      const totalLogosM = lista.reduce((s,x) => s + x.a, 0);
+      const aplicaImpuesto = (totalLogosM + DIRIS) > TOPE_M;
+
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('REPORTE CONTABLE');
+
+      // Estructura de Columnas Superior
+      ws.columns = [
+        { header: 'FECHA', key: 'fecha', width: 12 },
+        { header: 'DNI / RUC', key: 'doc', width: 15 },
+        { header: 'DETALLE DEL SERVICIO', key: 'desc', width: 35 },
+        { header: 'ESTADO', key: 'est', width: 15 },
+        { header: 'MONTO BRUTO', key: 'a', width: 15 },
+        { header: 'IMPUESTO (8%)', key: 'tax', width: 15 },
+        { header: 'MONTO NETO', key: 'net', width: 15 },
+        { header: 'LINK SUSTENTO', key: 'link', width: 30 }
+      ];
+
+      // Estilo de Cabecera
+      const headerRow = ws.getRow(1);
+      headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+      headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1C1C1E' } };
+      headerRow.alignment = { horizontal: 'center' };
+
+      // Filas de Datos
+      lista.forEach((x, i) => {
+        const taxVal = aplicaImpuesto ? x.a * 0.08 : 0;
+        const row = ws.addRow({
+          fecha: x.fecha,
+          doc: x.doc,
+          desc: x.desc,
+          est: x.fact ? 'FACTURADO' : 'PENDIENTE',
+          a: x.a,
+          tax: taxVal,
+          net: x.a - taxVal,
+          link: x.link ? { text: 'Abrir Carpeta', hyperlink: x.link } : '---'
+        });
+
+        // Zebra Styling
+        if (i % 2 === 0) row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9F9F9' } };
+        
+        // Formato Moneda
+        ['a', 'tax', 'net'].forEach(col => {
+          const cell = row.getCell(col);
+          cell.numFmt = '"S/" #,##0.00';
+          cell.alignment = { horizontal: 'right' };
+        });
+
+        // Estilo de Estado y Links
+        const cellEst = row.getCell('est');
+        cellEst.font = { bold: true, color: { argb: x.fact ? 'FF30D158' : 'FFFFD60A' } };
+        if (x.link) {
+          const cellLink = row.getCell('link');
+          cellLink.font = { color: { argb: 'FF007AFF' }, underline: true };
+        }
+      });
+
+      // Fila de Resumen Final
+      ws.addRow([]);
+      const footer = ws.addRow(['', '', 'TOTAL ACUMULADO DEL MES', '', totalLogosM, aplicaImpuesto ? totalLogosM * 0.08 : 0, aplicaImpuesto ? totalLogosM * 0.92 : totalLogosM]);
+      footer.font = { bold: true, size: 12 };
+      footer.getCell(5).numFmt = '"S/" #,##0.00';
+      footer.getCell(6).numFmt = '"S/" #,##0.00';
+      footer.getCell(7).numFmt = '"S/" #,##0.00';
+
+      const buffer = await wb.xlsx.writeBuffer();
+      saveAs(new Blob([buffer]), `SafeLimit_Reporte_${MESES[mesA]}_${anoA}.xlsx`);
+    }
+
+    init();
+  </script>
+</body>
+</html>
