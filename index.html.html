@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SafeLimit∞ Business Pro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  
+  <style>
+    :root {
+      --bg-app: #121214;
+      --card-bg: #1e1e20;
+      --text-main: #f1f1f1;
+      --text-muted: #a1a1aa;
+      --border-color: #2d2d30;
+      --safe: #22c55e;
+      --warn: #eab308;
+      --danger: #ef4444;
+      --brand: #3b82f6;
+      --current-color: var(--safe);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-app);
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+      padding: 30px 15px;
+      margin: 0;
+      min-height: 100vh;
+    }
+
+    .dashboard { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 15px; }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 20px;
+    }
+
+    .card-annual { background: linear-gradient(145deg, #1e1e20, #141415); border-left: 4px solid var(--brand); }
+    .card-monthly { border-top: 4px solid var(--current-color); }
+
+    /* Tipografía */
+    .label-caps { color: var(--text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 700; margin-bottom: 5px; display: block; }
+    .monto-grande { font-size: 2.8rem; font-weight: 800; text-align: center; margin: 10px 0; color: var(--current-color); letter-spacing: -1.5px; }
+
+    /* Barras de Progreso */
+    .progress-container { margin: 15px 0; }
+    .progress-bg { background: #2d2d30; border-radius: 999px; height: 8px; overflow: hidden; border: 1px solid #333; }
+    .progress-bar { height: 100%; transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
+
+    /* Dashboard Stats */
+    .math-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+    .math-item { background: #161618; padding: 12px; border-radius: 12px; border: 1px solid var(--border-color); }
+    .math-val { display: block; font-weight: 700; font-size: 15px; margin-top: 4px; }
+
+    /* Formulario */
+    .form-registro { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; }
+    .input-row { display: flex; gap: 8px; }
+    input, select { 
+      background: #161618; border: 1px solid var(--border-color); color: white; 
+      padding: 12px; border-radius: 10px; font-family: inherit; font-size: 14px; outline: none;
+    }
+    input:focus { border-color: var(--brand); }
+    .btn-add { background: var(--brand); color: #000; font-weight: 800; border: none; padding: 14px; border-radius: 12px; cursor: pointer; margin-top: 5px; }
+
+    /* Historial */
+    .history-list { max-height: 300px; overflow-y: auto; margin-top: 10px; }
+    .history-item { 
+      display: flex; justify-content: space-between; align-items: center; 
+      padding: 12px; border-bottom: 1px solid var(--border-color); 
+      transition: background 0.2s;
+    }
+    .item-facturado { border-left: 3px solid var(--brand); background: rgba(59, 130, 246, 0.05); }
+    
+    .btn-check { 
+      width: 28px; height: 28px; border-radius: 6px; border: 1px solid #444; 
+      background: transparent; color: #444; cursor: pointer; font-weight: 800;
+    }
+    .btn-check.active { background: var(--brand); border-color: var(--brand); color: #000; }
+
+    .btn-excel { 
+      background: transparent; border: 1px solid var(--brand); color: var(--brand); 
+      padding: 12px; border-radius: 12px; width: 100%; font-weight: 700; cursor: pointer; margin-top: 15px;
+    }
+    .btn-excel:hover { background: var(--brand); color: #000; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+  </style>
+</head>
+<body>
+
+  <div class="dashboard">
+    <div style="display:flex; gap:10px;">
+      <select id="sel-mes" onchange="actualizarUI()" style="flex:2"></select>
+      <select id="sel-ano" onchange="actualizarUI()" style="flex:1"></select>
+    </div>
+
+    <div class="card card-annual">
+      <span class="label-caps">Acumulado Anual (Proyectado)</span>
+      <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+        <span id="txt-total-ano" style="font-size: 1.5rem; font-weight: 800;">S/ 0.00</span>
+        <span id="txt-porc-ano" style="font-size: 12px; color: var(--text-muted);">0% del límite</span>
+      </div>
+      <div class="progress-container">
+        <div class="progress-bg">
+          <div id="bar-ano" class="progress-bar" style="width: 0%; background: var(--brand);"></div>
+        </div>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-muted);">
+        <span>S/ 0.00</span>
+        <span>Límite Suspensión: S/ 48,125</span>
+      </div>
+    </div>
+
+    <div class="card card-monthly">
+      <span class="label-caps" id="lbl-mes-ano">MARZO 2026</span>
+      <div class="monto-grande" id="txt-total-mes">0.00</div>
+      
+      <div class="progress-container">
+        <div class="progress-bg">
+          <div id="bar-mes" class="progress-bar" style="width: 0%; background: var(--current-color);"></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-muted); margin-top:5px;">
+          <span id="txt-porc-mes">0% del tope mensual</span>
+          <span>Tope: S/ 4,010 (Inc. DIRIS)</span>
+        </div>
+      </div>
+
+      <div class="math-grid">
+        <div class="math-item">
+          <span class="label-caps" style="font-size:8px;">Impuesto (8%)</span>
+          <span id="txt-tax" class="math-val" style="color:var(--danger);">S/ 0.00</span>
+        </div>
+        <div class="math-item">
+          <span class="label-caps" style="font-size:8px;">Pendiente RHE</span>
+          <span id="txt-pend" class="math-val" style="color:var(--brand);">S/ 0.00</span>
+        </div>
+      </div>
+
+      <div class="form-registro">
+        <div class="input-row">
+          <input type="number" id="in-monto" placeholder="S/ Monto" style="flex:1">
+          <input type="text" id="in-desc" placeholder="Cliente / Proyecto" style="flex:2">
+        </div>
+        <div class="input-row">
+          <input type="text" id="in-doc" placeholder="DNI o RUC" style="flex:1">
+          <input type="url" id="in-link" placeholder="Link Drive Sustento" style="flex:1">
+        </div>
+        <button class="btn-add" onclick="registrar()">REGISTRAR EN LIBRO CONTABLE</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <span class="label-caps">Historial de Transacciones</span>
+      <div id="historia" class="history-list"></div>
+      <button class="btn-excel" onclick="exportarExcelV4()">GENERAR REPORTE DE AUDITORÍA (.XLSX)</button>
+    </div>
+  </div>
+
+  <script>
+    const DIRIS = 2000;
+    const TOPE_M = 4010;
+    const TOPE_A = 48125;
+    const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+    
+    let db = JSON.parse(localStorage.getItem('SL_MASTER_V4')) || {};
+    let anoAct = new Date().getFullYear();
+    let mesAct = new Date().getMonth();
+
+    function init() {
+      const sm = document.getElementById('sel-mes');
+      const sa = document.getElementById('sel-ano');
+      MESES.forEach((m,i) => sm.add(new Option(m,i)));
+      for(let i=0; i<5; i++) sa.add(new Option(anoAct+i, anoAct+i));
+      sm.value = mesAct;
+      sa.value = anoAct;
+      actualizarUI();
+    }
+
+    function registrar() {
+      const m = parseFloat(document.getElementById('in-monto').value);
+      const d = document.getElementById('in-desc').value || "Servicio";
+      const doc = document.getElementById('in-doc').value || "---";
+      const l = document.getElementById('in-link').value || "";
+
+      if(m > 0) {
+        if(!db[anoAct]) db[anoAct] = {};
+        if(!db[anoAct][mesAct]) db[anoAct][mesAct] = [];
+        db[anoAct][mesAct].push({ id:Date.now(), a:m, desc:d, doc:doc, link:l, fact:false, fecha:new Date().toLocaleDateString('es-PE') });
+        save();
+        document.getElementById('in-monto').value = '';
+        document.getElementById('in-desc').value = '';
+        actualizarUI();
+      }
+    }
+
+    function toggleFact(id) {
+      db[anoAct][mesAct] = db[anoAct][mesAct].map(x => x.id === id ? {...x, fact:!x.fact} : x);
+      save(); actualizarUI();
+    }
+
+    function borrar(id) { if(confirm('¿Eliminar?')) { db[anoAct][mesAct] = db[anoAct][mesAct].filter(x => x.id!==id); save(); actualizarUI(); } }
+
+    function save() { localStorage.setItem('SL_MASTER_V4', JSON.stringify(db)); }
+
+    function actualizarUI() {
+      mesAct = parseInt(document.getElementById('sel-mes').value);
+      anoAct = parseInt(document.getElementById('sel-ano').value);
+      
+      const lista = (db[anoAct] && db[anoAct][mesAct]) ? db[anoAct][mesAct] : [];
+      const totalLogosMes = lista.reduce((s,x) => s + x.a, 0);
+      const totalGlobalMes = totalLogosMes + DIRIS;
+      
+      // Calculo Anual
+      let totalLogosAno = 0;
+      if(db[anoAct]) {
+        for(let m=0; m<12; m++) {
+          if(db[anoAct][m]) totalLogosAno += db[anoAct][m].reduce((s,x) => s + x.a, 0);
+        }
+      }
+      const totalGlobalAno = totalLogosAno + (DIRIS * 12);
+
+      // UI Mensual
+      document.getElementById('lbl-mes-ano').innerText = `${MESES[mesAct]} ${anoAct}`;
+      document.getElementById('txt-total-mes').innerText = totalLogosMes.toLocaleString('en-US', {minFD:2});
+      let pMes = (totalGlobalMes / TOPE_M) * 100;
+      document.getElementById('bar-mes').style.width = Math.min(pMes, 100) + "%";
+      document.getElementById('txt-porc-mes').innerText = pMes.toFixed(1) + "% del tope mensual";
+      
+      // UI Anual
+      document.getElementById('txt-total-ano').innerText = "S/ " + totalGlobalAno.toLocaleString('en-US', {minFD:2});
+      let pAno = (totalGlobalAno / TOPE_A) * 100;
+      document.getElementById('bar-ano').style.width = Math.min(pAno, 100) + "%";
+      document.getElementById('txt-porc-ano').innerText = pAno.toFixed(1) + "% del límite anual";
+      
+      // Colores
+      const root = document.documentElement;
+      if(totalGlobalMes > TOPE_M) root.style.setProperty('--current-color', 'var(--danger)');
+      else if(totalGlobalMes > 3500) root.style.setProperty('--current-color', 'var(--warn)');
+      else root.style.setProperty('--current-color', 'var(--safe)');
+
+      // Impuestos y Pendientes
+      const tax = totalGlobalMes > TOPE_M ? totalGlobalMes * 0.08 : 0;
+      document.getElementById('txt-tax').innerText = "S/ " + tax.toFixed(2);
+      const pend = lista.filter(x => !x.fact).reduce((s,x) => s + x.a, 0);
+      document.getElementById('txt-pend').innerText = "S/ " + pend.toFixed(2);
+
+      // Lista
+      const cont = document.getElementById('historia');
+      cont.innerHTML = lista.length ? '' : '<p style="text-align:center;font-size:12px;color:#666;">Sin movimientos.</p>';
+      [...lista].reverse().forEach(x => {
+        cont.innerHTML += `
+          <div class="history-item ${x.fact ? 'item-facturado' : ''}">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <button class="btn-check ${x.fact ? 'active' : ''}" onclick="toggleFact(${x.id})">✓</button>
+              <div>
+                <span style="display:block; font-size:13px; font-weight:600;">${x.desc}</span>
+                <span style="font-size:10px; color:#666;">Doc: ${x.doc}</span>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <span style="font-weight:700;">S/ ${x.a.toFixed(2)}</span>
+              <button onclick="borrar(${x.id})" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:16px; margin-left:10px;">×</button>
+            </div>
+          </div>`;
+      });
+    }
+
+    async function exportarExcelV4() {
+      const lista = (db[anoAct] && db[anoAct][mesAct]) ? db[anoAct][mesAct] : [];
+      if(!lista.length) return alert("Nada que exportar.");
+
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('AUDITORÍA TRIBUTARIA');
+
+      // Estilo de Columnas
+      ws.columns = [
+        { header: 'FECHA', key: 'fecha', width: 12 },
+        { header: 'DNI / RUC', key: 'doc', width: 15 },
+        { header: 'DETALLE DEL SERVICIO', key: 'desc', width: 35 },
+        { header: 'ESTADO RHE', key: 'fact', width: 15 },
+        { header: 'MONTO BRUTO', key: 'a', width: 18 },
+        { header: 'IMPUESTO (8%)', key: 'tax', width: 18 },
+        { header: 'MONTO NETO', key: 'net', width: 18 },
+        { header: 'SUSTENTO DRIVE', key: 'link', width: 35 }
+      ];
+
+      // Cabecera Pro
+      const head = ws.getRow(1);
+      head.font = { bold:true, color:{argb:'FFFFFFFF'}, size:12 };
+      head.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FF222225'} };
+      head.alignment = { horizontal:'center', vertical:'middle' };
+
+      // Lógica de Impuestos Globales del Mes
+      const totalLogosMes = lista.reduce((s,x) => s + x.a, 0);
+      const aplicaImpuesto = (totalLogosMes + DIRIS) > TOPE_M;
+
+      lista.forEach((x, i) => {
+        const taxVal = aplicaImpuesto ? x.a * 0.08 : 0;
+        const row = ws.addRow({
+          fecha: x.fecha,
+          doc: x.doc,
+          desc: x.desc,
+          fact: x.fact ? 'FACTURADO' : 'PENDIENTE',
+          a: x.a,
+          tax: taxVal,
+          net: x.a - taxVal,
+          link: x.link ? { text: 'Abrir Carpeta', hyperlink: x.link } : 'N/A'
+        });
+
+        // Estilos de Fila (Zebra)
+        if(i % 2 === 0) row.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFF9F9F9'} };
+        
+        // Formatos
+        row.getCell('a').numFmt = '"S/" #,##0.00';
+        row.getCell('tax').numFmt = '"S/" #,##0.00';
+        row.getCell('net').numFmt = '"S/" #,##0.00';
+        
+        // Colores de Estado
+        const cellFact = row.getCell('fact');
+        cellFact.font = { bold:true, color: { argb: x.fact ? 'FF22C55E' : 'FFD97706' } };
+        
+        // Estilo Link
+        if(x.link) {
+          row.getCell('link').font = { color:{argb:'FF2563EB'}, underline:true };
+        }
+      });
+
+      // Fila de Totales Finales
+      const totalRow = ws.addRow({
+        fecha: '', doc: '', desc: 'TOTAL ACUMULADO DEL MES', fact: '',
+        a: totalLogosMes, 
+        tax: aplicaImpuesto ? totalLogosMes * 0.08 : 0, 
+        net: aplicaImpuesto ? totalLogosMes * 0.92 : totalLogosMes
+      });
+      totalRow.font = { bold:true, size:13 };
+      totalRow.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFEDF2F7'} };
+      ['a','tax','net'].forEach(c => totalRow.getCell(c).numFmt = '"S/" #,##0.00');
+
+      const buffer = await wb.xlsx.writeBuffer();
+      saveAs(new Blob([buffer]), `SafeLimit_Auditoria_${MESES[mesAct]}_${anoAct}.xlsx`);
+    }
+
+    init();
+  </script>
+</body>
+</html>
